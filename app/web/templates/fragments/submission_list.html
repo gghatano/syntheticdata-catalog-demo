@@ -1,0 +1,66 @@
+{% if submissions %}
+<table>
+    <thead>
+        <tr>
+            <th>ID</th>
+            <th>タイトル</th>
+            <th>データセット</th>
+            <th>ステータス</th>
+            <th>提出日</th>
+            <th>操作</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for sub in submissions %}
+        <tr>
+            <td>{{ sub.submission_id }}</td>
+            <td>{{ sub.title }}</td>
+            <td>{{ sub.dataset.name }}</td>
+            <td>
+                {% if sub.status.value == "approved" %}
+                <span class="badge badge-success">承認済み</span>
+                {% elif sub.status.value == "rejected" %}
+                <span class="badge badge-danger">却下</span>
+                {% elif sub.status.value == "submitted" %}
+                <span class="badge badge-info">審査中</span>
+                {% elif sub.status.value == "validation_failed" %}
+                <span class="badge badge-danger">バリデーション失敗</span>
+                {% elif sub.status.value in ("executed_synthetic", "executed_real") %}
+                <span class="badge badge-success">実行済み</span>
+                {% elif sub.status.value == "execution_failed" %}
+                <span class="badge badge-danger">実行失敗</span>
+                {% else %}
+                <span class="badge badge-secondary">{{ sub.status.value }}</span>
+                {% endif %}
+            </td>
+            <td>{{ sub.created_at.strftime('%Y-%m-%d') }}</td>
+            <td>
+                {% if user.role.value == "hr" %}
+                    {% if sub.status.value == "submitted" %}
+                    <form method="post" action="/hr/submissions/{{ sub.submission_id }}/approve" style="display:inline">
+                        <button type="submit" class="btn btn-sm btn-success">承認</button>
+                    </form>
+                    <form method="post" action="/hr/submissions/{{ sub.submission_id }}/reject" style="display:inline">
+                        <input type="hidden" name="reason" value="">
+                        <button type="submit" class="btn btn-sm btn-danger">却下</button>
+                    </form>
+                    {% elif sub.status.value == "approved" %}
+                    <form method="post" action="/hr/executions/{{ sub.submission_id }}/run" style="display:inline">
+                        <select name="mode" class="btn-sm">
+                            <option value="synthetic">合成</option>
+                            <option value="real">実データ</option>
+                        </select>
+                        <button type="submit" class="btn btn-sm btn-warning">実行</button>
+                    </form>
+                    {% endif %}
+                {% else %}
+                    <a href="/proposer/submissions/{{ sub.submission_id }}" class="btn btn-sm btn-primary">詳細</a>
+                {% endif %}
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% else %}
+<p>提出物がありません。</p>
+{% endif %}

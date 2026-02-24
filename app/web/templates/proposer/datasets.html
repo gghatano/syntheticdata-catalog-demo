@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+
+{% block title %}公開データセット一覧{% endblock %}
+
+{% block content %}
+<h1>公開データセット一覧</h1>
+
+<div class="action-bar">
+    <a href="/proposer/submissions/new" class="btn btn-primary">新規提出</a>
+    <a href="/proposer/submissions" class="btn btn-primary">自分の提出物</a>
+</div>
+
+<div id="dataset-list"
+     hx-get="/proposer/datasets"
+     hx-trigger="load delay:0s"
+     hx-swap="innerHTML">
+    {% include "fragments/dataset_list.html" %}
+</div>
+{% endblock %}

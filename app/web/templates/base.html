@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}合成データ活用デモ{% endblock %}</title>
+    <script src="https://unpkg.com/htmx.org@2.0.4"></script>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+    <nav>
+        <a href="/">合成データ活用デモ</a>
+        {% if user %}
+        <span>{{ user.display_name }} ({{ user.role.value }})</span>
+        <a href="/logout">ログアウト</a>
+        {% endif %}
+    </nav>
+    <main>{% block content %}{% endblock %}</main>
+</body>
+</html>

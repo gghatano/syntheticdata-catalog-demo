@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+
+{% block title %}新規提出{% endblock %}
+
+{% block content %}
+<h1>新規提出</h1>
+
+<div class="card">
+    <form method="post" action="/proposer/submissions" enctype="multipart/form-data">
+        <div class="form-group">
+            <label for="dataset_id">対象データセット</label>
+            <select id="dataset_id" name="dataset_id" required>
+                <option value="">選択してください</option>
+                {% for ds in datasets %}
+                <option value="{{ ds.dataset_id }}">{{ ds.name }} ({{ ds.dataset_id }})</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="form-group">
+            <label for="title">タイトル</label>
+            <input type="text" id="title" name="title" required>
+        </div>
+        <div class="form-group">
+            <label for="description">説明</label>
+            <textarea id="description" name="description" required></textarea>
+        </div>
+        <div class="form-group">
+            <label for="zip_file">ZIPファイル</label>
+            <input type="file" id="zip_file" name="zip_file" accept=".zip" required>
+        </div>
+        <button type="submit" class="btn btn-primary">提出する</button>
+    </form>
+</div>
+
+<a href="/proposer/submissions" class="btn btn-primary">提出物一覧に戻る</a>
+{% endblock %}

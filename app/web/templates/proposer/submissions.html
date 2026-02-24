@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+
+{% block title %}自分の提出物一覧{% endblock %}
+
+{% block content %}
+<h1>自分の提出物一覧</h1>
+
+<div class="action-bar">
+    <a href="/proposer/submissions/new" class="btn btn-primary">新規提出</a>
+    <a href="/proposer/datasets" class="btn btn-primary">データセット一覧</a>
+</div>
+
+<div id="submission-list"
+     hx-get="/proposer/submissions"
+     hx-trigger="load delay:0s"
+     hx-swap="innerHTML">
+    {% include "fragments/submission_list.html" %}
+</div>
+{% endblock %}

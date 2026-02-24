@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+
+{% block title %}提出物詳細 - {{ submission.title }}{% endblock %}
+
+{% block content %}
+<h1>{{ submission.title }}</h1>
+
+<div class="card">
+    <dl class="detail-grid">
+        <dt>提出ID</dt>
+        <dd>{{ submission.submission_id }}</dd>
+        <dt>ステータス</dt>
+        <dd>
+            {% if submission.status.value == "approved" %}
+            <span class="badge badge-success">承認済み</span>
+            {% elif submission.status.value == "rejected" %}
+            <span class="badge badge-danger">却下</span>
+            {% elif submission.status.value == "submitted" %}
+            <span class="badge badge-info">審査中</span>
+            {% elif submission.status.value == "validation_failed" %}
+            <span class="badge badge-danger">バリデーション失敗</span>
+            {% elif submission.status.value in ("executed_synthetic", "executed_real") %}
+            <span class="badge badge-success">実行済み</span>
+            {% elif submission.status.value == "execution_failed" %}
+            <span class="badge badge-danger">実行失敗</span>
+            {% else %}
+            <span class="badge badge-secondary">{{ submission.status.value }}</span>
+            {% endif %}
+        </dd>
+        <dt>データセット</dt>
+        <dd>{{ submission.dataset.name }} ({{ submission.dataset.dataset_id }})</dd>
+        <dt>提出日</dt>
+        <dd>{{ submission.created_at.strftime('%Y-%m-%d %H:%M') }}</dd>
+    </dl>
+</div>
+
+<div class="card">
+    <h2>説明</h2>
+    <p>{{ submission.description }}</p>
+</div>
+
+{% if submission.executions %}
+<div class="card">
+    <h2>実行履歴</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>実行ID</th>
+                <th>モード</th>
+                <th>ステータス</th>
+                <th>実行日</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for ex in submission.executions %}
+            <tr>
+                <td>{{ ex.execution_id }}</td>
+                <td>{{ ex.mode.value }}</td>
+                <td>
+                    {% if ex.status.value == "succeeded" %}
+                    <span class="badge badge-success">成功</span>
+                    {% elif ex.status.value == "failed" %}
+                    <span class="badge badge-danger">失敗</span>
+                    {% else %}
+                    <span class="badge badge-secondary">{{ ex.status.value }}</span>
+                    {% endif %}
+                </td>
+                <td>{{ ex.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endif %}
+
+<a href="/proposer/submissions" class="btn btn-primary">一覧に戻る</a>
+{% endblock %}

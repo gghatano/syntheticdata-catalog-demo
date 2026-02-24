@@ -1,0 +1,40 @@
+{% if datasets %}
+<table>
+    <thead>
+        <tr>
+            <th>ID</th>
+            <th>名前</th>
+            <th>公開</th>
+            <th>ファイル数</th>
+            <th>作成日</th>
+            <th>操作</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for ds in datasets %}
+        <tr>
+            <td>{{ ds.dataset_id }}</td>
+            <td>{{ ds.name }}</td>
+            <td>
+                {% if ds.is_published %}
+                <span class="badge badge-success">公開</span>
+                {% else %}
+                <span class="badge badge-secondary">非公開</span>
+                {% endif %}
+            </td>
+            <td>{{ ds.files | length }}</td>
+            <td>{{ ds.created_at.strftime('%Y-%m-%d') }}</td>
+            <td>
+                {% if user.role.value == "hr" %}
+                <a href="/hr/datasets/{{ ds.dataset_id }}" class="btn btn-sm btn-primary">詳細</a>
+                {% else %}
+                <a href="/proposer/datasets/{{ ds.dataset_id }}" class="btn btn-sm btn-primary">詳細</a>
+                {% endif %}
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% else %}
+<p>データセットがありません。</p>
+{% endif %}

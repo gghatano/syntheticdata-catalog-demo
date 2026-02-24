@@ -1,0 +1,41 @@
+{% if execution.results %}
+    {% for result in execution.results %}
+    <div class="card">
+        <h3>実行結果</h3>
+        <dl class="detail-grid">
+            <dt>スコープ</dt>
+            <dd>
+                {% if result.scope.value == "public" %}
+                <span class="badge badge-success">公開</span>
+                {% elif result.scope.value == "submitter" %}
+                <span class="badge badge-info">提出者のみ</span>
+                {% else %}
+                <span class="badge badge-secondary">非公開</span>
+                {% endif %}
+            </dd>
+            {% if result.published_at %}
+            <dt>公開日</dt>
+            <dd>{{ result.published_at.strftime('%Y-%m-%d %H:%M') }}</dd>
+            {% endif %}
+        </dl>
+        <h4>結果データ</h4>
+        <pre>{{ result.result_json }}</pre>
+    </div>
+    {% endfor %}
+{% else %}
+<p>実行結果がありません。</p>
+{% endif %}
+
+{% if execution.stdout_path %}
+<div class="card">
+    <h3>標準出力</h3>
+    <p><code>{{ execution.stdout_path }}</code></p>
+</div>
+{% endif %}
+
+{% if execution.stderr_path %}
+<div class="card">
+    <h3>標準エラー出力</h3>
+    <p><code>{{ execution.stderr_path }}</code></p>
+</div>
+{% endif %}

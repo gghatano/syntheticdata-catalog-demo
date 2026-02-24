@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+
+{% block title %}提出物一覧 - HR{% endblock %}
+
+{% block content %}
+<h1>提出物一覧</h1>
+
+<div id="submission-list"
+     hx-get="/hr/submissions"
+     hx-trigger="load delay:0s"
+     hx-swap="innerHTML">
+    {% include "fragments/submission_list.html" %}
+</div>
+{% endblock %}

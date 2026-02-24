@@ -1,0 +1,98 @@
+{% extends "base.html" %}
+
+{% block title %}データセット詳細 - {{ dataset.name }}{% endblock %}
+
+{% block content %}
+<h1>{{ dataset.name }}</h1>
+
+<div class="card">
+    <dl class="detail-grid">
+        <dt>データセットID</dt>
+        <dd>{{ dataset.dataset_id }}</dd>
+        <dt>公開状態</dt>
+        <dd>
+            {% if dataset.is_published %}
+            <span class="badge badge-success">公開中</span>
+            {% else %}
+            <span class="badge badge-secondary">非公開</span>
+            {% endif %}
+        </dd>
+        <dt>作成日</dt>
+        <dd>{{ dataset.created_at.strftime('%Y-%m-%d %H:%M') }}</dd>
+    </dl>
+</div>
+
+<div class="card">
+    <h2>ファイル一覧</h2>
+    {% if dataset.files %}
+    <table>
+        <thead>
+            <tr>
+                <th>ファイル種別</th>
+                <th>パス</th>
+                <th>登録日</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for f in dataset.files %}
+            <tr>
+                <td>{{ f.file_type.value }}</td>
+                <td>{{ f.file_path }}</td>
+                <td>{{ f.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p>ファイルが登録されていません。</p>
+    {% endif %}
+</div>
+
+<div class="card">
+    <h2>合成データ</h2>
+    {% if dataset.artifacts %}
+    <table>
+        <thead>
+            <tr>
+                <th>ファイル種別</th>
+                <th>Seed</th>
+                <th>パス</th>
+                <th>作成日</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for a in dataset.artifacts %}
+            <tr>
+                <td>{{ a.file_type.value }}</td>
+                <td>{{ a.seed }}</td>
+                <td>{{ a.file_path }}</td>
+                <td>{{ a.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p>合成データは未生成です。</p>
+    {% endif %}
+
+    <div class="action-bar">
+        <form method="post" action="/hr/datasets/{{ dataset.dataset_id }}/synthetic">
+            <button type="submit" class="btn btn-primary">合成データ生成</button>
+        </form>
+        {% if not dataset.is_published %}
+        <form method="post" action="/hr/datasets/{{ dataset.dataset_id }}/publish">
+            <button type="submit" class="btn btn-success">公開する</button>
+        </form>
+        {% endif %}
+    </div>
+</div>
+
+{% if quality_report %}
+<div class="card" id="quality-report">
+    <h2>品質レポート</h2>
+    {% include "fragments/quality_report.html" %}
+</div>
+{% endif %}
+
+<a href="/hr/datasets" class="btn btn-primary">一覧に戻る</a>
+{% endblock %}

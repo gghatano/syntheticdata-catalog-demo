@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+
+{% block title %}実行結果 - {{ execution.execution_id }}{% endblock %}
+
+{% block content %}
+<h1>実行結果: {{ execution.execution_id }}</h1>
+
+<div class="card">
+    <dl class="detail-grid">
+        <dt>実行ID</dt>
+        <dd>{{ execution.execution_id }}</dd>
+        <dt>モード</dt>
+        <dd>
+            {% if execution.mode.value == "synthetic" %}
+            <span class="badge badge-info">合成データ</span>
+            {% else %}
+            <span class="badge badge-warning">実データ</span>
+            {% endif %}
+        </dd>
+        <dt>ステータス</dt>
+        <dd>
+            {% if execution.status.value == "succeeded" %}
+            <span class="badge badge-success">成功</span>
+            {% elif execution.status.value == "failed" %}
+            <span class="badge badge-danger">失敗</span>
+            {% elif execution.status.value == "running" %}
+            <span class="badge badge-warning">実行中</span>
+            {% elif execution.status.value == "timeout" %}
+            <span class="badge badge-danger">タイムアウト</span>
+            {% else %}
+            <span class="badge badge-secondary">{{ execution.status.value }}</span>
+            {% endif %}
+        </dd>
+        <dt>作成日</dt>
+        <dd>{{ execution.created_at.strftime('%Y-%m-%d %H:%M') }}</dd>
+    </dl>
+</div>
+
+<div id="execution-result">
+    {% include "fragments/execution_result.html" %}
+</div>
+
+<a href="/hr/submissions" class="btn btn-primary">提出物一覧に戻る</a>
+{% endblock %}

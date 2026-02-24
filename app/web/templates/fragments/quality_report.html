@@ -1,0 +1,33 @@
+{% if quality_report %}
+    {% if quality_report.get("summary") %}
+    <div class="card">
+        <h3>サマリー</h3>
+        {% for key, value in quality_report["summary"].items() %}
+        <div class="quality-metric">
+            <span>{{ key }}</span>
+            <span>{{ value }}</span>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    {% if quality_report.get("per_file") %}
+        {% for file_name, metrics in quality_report["per_file"].items() %}
+        <div class="card">
+            <h3>{{ file_name }}</h3>
+            {% if metrics is mapping %}
+                {% for key, value in metrics.items() %}
+                <div class="quality-metric">
+                    <span>{{ key }}</span>
+                    <span>{{ value }}</span>
+                </div>
+                {% endfor %}
+            {% else %}
+                <p>{{ metrics }}</p>
+            {% endif %}
+        </div>
+        {% endfor %}
+    {% endif %}
+{% else %}
+<p>品質レポートがありません。</p>
+{% endif %}
