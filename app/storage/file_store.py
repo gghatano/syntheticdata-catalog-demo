@@ -78,10 +78,19 @@ class FileStore:
         return dest
 
     def extract_submission(self, zip_path: Path, submission_id: str) -> Path:
-        """Extract a submission ZIP and return the extraction directory."""
+        """Extract a submission ZIP and return the extraction directory.
+
+        Validates each member path to prevent zip-slip (path traversal) attacks.
+        """
         extract_dir = self.submissions_dir / submission_id / "extracted"
         extract_dir.mkdir(parents=True, exist_ok=True)
         with zipfile.ZipFile(zip_path, "r") as zf:
+            for member in zf.namelist():
+                member_path = (extract_dir / member).resolve()
+                if not str(member_path).startswith(str(extract_dir.resolve())):
+                    raise ValueError(
+                        f"不正なZIPエントリです（パストラバーサル）: {member}"
+                    )
             zf.extractall(extract_dir)
         return extract_dir
 

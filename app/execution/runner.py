@@ -58,6 +58,18 @@ class ExecutionRunner:
         manifest = json.loads((extracted_dir / "manifest.json").read_text(encoding="utf-8"))
         entry_point = manifest["entry_point"]
 
+        # Validate entry_point does not escape the extracted directory
+        resolved_entry = (extracted_dir / entry_point).resolve()
+        if not str(resolved_entry).startswith(str(extracted_dir.resolve())):
+            return ExecutionResult(
+                success=False,
+                stdout_path=None,
+                stderr_path=None,
+                output_path=None,
+                output_data=None,
+                errors=[f"Entry point path traversal detected: {entry_point}"],
+            )
+
         # 3. Determine output path and run subprocess
         output_file = extracted_dir / "output.json"
 
