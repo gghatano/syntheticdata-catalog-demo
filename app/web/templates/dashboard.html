@@ -1,0 +1,150 @@
+{% extends "base.html" %}
+
+{% block title %}ダッシュボード{% endblock %}
+
+{% block content %}
+<h1>ダッシュボード</h1>
+
+{% if user.role.value == "hr" %}
+{# HR Dashboard #}
+<div class="card">
+    <h2>最近のデータセット</h2>
+    {% if datasets %}
+    <table>
+        <thead>
+            <tr>
+                <th>名前</th>
+                <th>状態</th>
+                <th>作成日</th>
+                <th>操作</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for ds in datasets[:5] %}
+            <tr>
+                <td>{{ ds.name }}</td>
+                <td>
+                    {% if ds.is_published %}
+                    <span class="badge badge-success">公開中</span>
+                    {% else %}
+                    <span class="badge badge-secondary">非公開</span>
+                    {% endif %}
+                </td>
+                <td>{{ ds.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                <td><a href="/hr/datasets/{{ ds.dataset_id }}" class="btn btn-sm btn-primary">詳細</a></td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    <a href="/hr/datasets" class="btn btn-primary">全データセット一覧</a>
+    {% else %}
+    <p>データセットがありません。</p>
+    {% endif %}
+</div>
+
+<div class="card">
+    <h2>レビュー待ち提案</h2>
+    {% if pending_proposals %}
+    <table>
+        <thead>
+            <tr>
+                <th>提案ID</th>
+                <th>タイトル</th>
+                <th>提案者</th>
+                <th>提出日</th>
+                <th>操作</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for p in pending_proposals %}
+            <tr>
+                <td>{{ p.proposal_id }}</td>
+                <td>{{ p.title }}</td>
+                <td>{{ p.user.display_name }}</td>
+                <td>{{ p.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                <td><a href="/hr/proposals/{{ p.proposal_id }}" class="btn btn-sm btn-primary">レビュー</a></td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    <a href="/hr/proposals" class="btn btn-primary">全提案一覧</a>
+    {% else %}
+    <p>レビュー待ちの提案はありません。</p>
+    {% endif %}
+</div>
+
+{% else %}
+{# Proposer Dashboard #}
+<div class="card">
+    <h2>公開データセット</h2>
+    {% if datasets %}
+    <table>
+        <thead>
+            <tr>
+                <th>名前</th>
+                <th>作成日</th>
+                <th>操作</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for ds in datasets[:5] %}
+            <tr>
+                <td>{{ ds.name }}</td>
+                <td>{{ ds.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                <td><a href="/proposer/datasets/{{ ds.dataset_id }}" class="btn btn-sm btn-primary">詳細</a></td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    <a href="/proposer/datasets" class="btn btn-primary">全データセット一覧</a>
+    {% else %}
+    <p>公開されたデータセットがありません。</p>
+    {% endif %}
+</div>
+
+<div class="card">
+    <h2>自分の提案</h2>
+    {% if my_proposals %}
+    <table>
+        <thead>
+            <tr>
+                <th>提案ID</th>
+                <th>タイトル</th>
+                <th>ステータス</th>
+                <th>提出日</th>
+                <th>操作</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for p in my_proposals %}
+            <tr>
+                <td>{{ p.proposal_id }}</td>
+                <td>{{ p.title }}</td>
+                <td>
+                    {% if p.status.value == "approved" %}
+                    <span class="badge badge-success">承認済み</span>
+                    {% elif p.status.value == "rejected" %}
+                    <span class="badge badge-danger">差戻し</span>
+                    {% elif p.status.value == "submitted" %}
+                    <span class="badge badge-info">提出済み</span>
+                    {% else %}
+                    <span class="badge badge-secondary">{{ p.status.value }}</span>
+                    {% endif %}
+                </td>
+                <td>{{ p.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                <td><a href="/proposer/proposals/{{ p.proposal_id }}" class="btn btn-sm btn-primary">詳細</a></td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    <a href="/proposer/proposals" class="btn btn-primary">全提案一覧</a>
+    {% else %}
+    <p>提案がありません。</p>
+    {% endif %}
+</div>
+
+<div class="action-bar">
+    <a href="/proposer/proposals/new" class="btn btn-success">新規提案を作成</a>
+</div>
+{% endif %}
+{% endblock %}

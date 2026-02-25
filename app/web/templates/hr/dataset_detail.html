@@ -49,6 +49,17 @@
 </div>
 
 <div class="card">
+    <h2>カタログ</h2>
+    {% if catalog_columns %}
+    <p>{{ catalog_columns | length }}列が定義されています。</p>
+    <a href="/hr/datasets/{{ dataset.dataset_id }}/catalog" class="btn btn-primary">カタログ編集</a>
+    {% else %}
+    <p>カタログが未生成です。</p>
+    <a href="/hr/datasets/{{ dataset.dataset_id }}/catalog" class="btn btn-primary">カタログを生成・編集</a>
+    {% endif %}
+</div>
+
+<div class="card">
     <h2>合成データ</h2>
     {% if dataset.artifacts %}
     <table>

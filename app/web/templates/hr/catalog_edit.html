@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+
+{% block title %}カタログ編集 - {{ dataset.name }}{% endblock %}
+
+{% block content %}
+<h1>カタログ編集: {{ dataset.name }}</h1>
+
+{% if message %}
+<div class="alert alert-success">{{ message }}</div>
+{% endif %}
+
+{% if error %}
+<div class="alert alert-error">{{ error }}</div>
+{% endif %}
+
+<div class="card">
+    <h2>カタログ自動生成</h2>
+    <p>CSVファイルを解析してカタログ（列定義・型推定・PII検出）を自動生成します。</p>
+    <form method="post" action="/hr/datasets/{{ dataset.dataset_id }}/catalog/derive">
+        <button type="submit" class="btn btn-primary">カタログ自動生成</button>
+    </form>
+</div>
+
+{% if columns %}
+<div class="card">
+    <h2>列定義</h2>
+    <form method="post" action="/hr/datasets/{{ dataset.dataset_id }}/catalog">
+        <table>
+            <thead>
+                <tr>
+                    <th>列名</th>
+                    <th>推定型</th>
+                    <th>PII</th>
+                    <th>説明</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for col in columns %}
+                <tr>
+                    <td>
+                        {{ col.column_name }}
+                        <input type="hidden" name="column_name" value="{{ col.column_name }}">
+                    </td>
+                    <td>{{ col.inferred_type }}</td>
+                    <td>
+                        <input type="checkbox" name="is_pii_{{ col.column_name }}" value="true"
+                            {% if col.is_pii %}checked{% endif %}>
+                        {% if col.pii_reason %}
+                        <small title="{{ col.pii_reason }}">{{ col.pii_reason }}</small>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <input type="text" name="description_{{ col.column_name }}"
+                            value="{{ col.description }}" style="width:100%">
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        <div class="action-bar">
+            <button type="submit" class="btn btn-success">保存</button>
+        </div>
+    </form>
+</div>
+{% else %}
+<div class="card">
+    <p>カタログが未生成です。まず「カタログ自動生成」を実行してください。</p>
+</div>
+{% endif %}
+
+<a href="/hr/datasets/{{ dataset.dataset_id }}" class="btn btn-primary">データセット詳細に戻る</a>
+{% endblock %}
