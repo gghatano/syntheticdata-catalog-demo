@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import shutil
 from pathlib import Path
 
 import typer
@@ -135,6 +136,59 @@ def show(
             typer.echo("ファイル:")
             for f in ds.files:
                 typer.echo(f"  {f.file_type.value}: {f.file_path}")
+    except (ValueError, PermissionError) as e:
+        typer.echo(f"エラー: {e}", err=True)
+        raise typer.Exit(code=1)
+    finally:
+        db.close()
+
+
+@app.command("download-synthetic")
+def download_synthetic(
+    dataset_id: str = typer.Option(..., help="データセットID"),
+    user: str = typer.Option(..., help="ダウンロード者のuser_id"),
+    output: Path = typer.Option(..., help="出力先ディレクトリ"),
+    output_json: bool = typer.Option(False, "--json", help="JSON形式で出力"),
+):
+    """合成データをダウンロード（ローカルコピー）"""
+    db = _init_db()
+    try:
+        from app.services.dataset_service import DatasetService
+        from app.storage.file_store import FileStore
+
+        file_store = FileStore()
+        svc = DatasetService(db, file_store)
+
+        # Access check
+        ds = svc.get_dataset(dataset_id, user)
+        if not ds.is_published:
+            raise PermissionError(f"Dataset {dataset_id} is not published")
+
+        # Copy synthetic data
+        syn_dir = file_store.get_synthetic_data_path(dataset_id)
+        if not syn_dir.exists():
+            raise ValueError(f"Synthetic data not found for dataset: {dataset_id}")
+
+        output.mkdir(parents=True, exist_ok=True)
+        csv_files = list(syn_dir.glob("*.csv"))
+        if not csv_files:
+            raise ValueError(f"No synthetic CSV files found for dataset: {dataset_id}")
+
+        copied = []
+        for csv_file in csv_files:
+            dest = output / csv_file.name
+            shutil.copy2(csv_file, dest)
+            copied.append(str(dest))
+
+        if output_json:
+            typer.echo(json.dumps({
+                "dataset_id": dataset_id,
+                "files": copied,
+            }, ensure_ascii=False, indent=2))
+        else:
+            typer.echo(f"合成データをダウンロードしました (dataset={dataset_id}):")
+            for f in copied:
+                typer.echo(f"  {f}")
     except (ValueError, PermissionError) as e:
         typer.echo(f"エラー: {e}", err=True)
         raise typer.Exit(code=1)
