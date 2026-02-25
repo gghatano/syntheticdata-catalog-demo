@@ -6,7 +6,9 @@ from app.db.models import (
     ExecutionMode,
     ExecutionStatus,
     FileType,
+    ProposalStatus,
     ResultScope,
+    ReviewAction,
     SubmissionStatus,
     UserRole,
 )
@@ -160,6 +162,54 @@ class CatalogColumnUpdate(BaseModel):
 class CatalogDeriveResponse(BaseModel):
     dataset_id: str
     columns: list[CatalogColumnResponse]
+
+
+# ---------- Proposal ----------
+
+
+class ProposalCreate(BaseModel):
+    dataset_id: str
+    title: str
+    summary: str
+    execution_command: str | None = None
+    expected_outputs: list[str] | None = None
+
+
+class ProposalResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    proposal_id: str
+    dataset_id: int
+    user_id: int
+    title: str
+    summary: str
+    code_path: str
+    report_path: str
+    execution_command: str | None = None
+    expected_outputs: str | None = None
+    status: ProposalStatus
+    created_at: datetime
+    updated_at: datetime
+
+
+class ProposalListResponse(BaseModel):
+    proposals: list[ProposalResponse]
+
+
+class ReviewCommentCreate(BaseModel):
+    action: ReviewAction
+    comment: str
+
+
+class ReviewCommentResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    proposal_id: int
+    reviewer_user_id: int
+    action: ReviewAction
+    comment: str
+    created_at: datetime
 
 
 # ---------- CSV Validation ----------
