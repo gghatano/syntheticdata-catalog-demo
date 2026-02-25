@@ -137,6 +137,31 @@ class ExecutionResultResponse(BaseModel):
     published_at: datetime | None = None
 
 
+# ---------- Catalog ----------
+
+
+class CatalogColumnResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    column_name: str
+    inferred_type: str
+    description: str
+    is_pii: bool
+    pii_reason: str | None = None
+    stats: dict = {}
+
+
+class CatalogColumnUpdate(BaseModel):
+    column_name: str
+    is_pii: bool | None = None
+    description: str | None = None
+
+
+class CatalogDeriveResponse(BaseModel):
+    dataset_id: str
+    columns: list[CatalogColumnResponse]
+
+
 # ---------- CSV Validation ----------
 
 

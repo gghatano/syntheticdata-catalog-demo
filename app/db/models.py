@@ -82,6 +82,7 @@ class Dataset(Base):
     files: Mapped[list["DatasetFile"]] = relationship(back_populates="dataset")
     artifacts: Mapped[list["SyntheticArtifact"]] = relationship(back_populates="dataset")
     submissions: Mapped[list["Submission"]] = relationship(back_populates="dataset")
+    catalog_columns: Mapped[list["CatalogColumn"]] = relationship(back_populates="dataset", cascade="all, delete-orphan")
 
 
 class DatasetFile(Base):
@@ -163,6 +164,22 @@ class ExecutionResult(Base):
     published_at: Mapped[datetime | None] = mapped_column(nullable=True)
 
     execution: Mapped["Execution"] = relationship(back_populates="results")
+
+
+class CatalogColumn(Base):
+    __tablename__ = "catalog_columns"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    dataset_id: Mapped[int] = mapped_column(ForeignKey("datasets.id"), nullable=False)
+    column_name: Mapped[str] = mapped_column(String, nullable=False)
+    inferred_type: Mapped[str] = mapped_column(String, nullable=False)
+    description: Mapped[str] = mapped_column(String, nullable=False, default="")
+    is_pii: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    pii_reason: Mapped[str | None] = mapped_column(String, nullable=True)
+    stats_json: Mapped[str] = mapped_column(Text, nullable=False, default="{}")
+    created_at: Mapped[datetime] = mapped_column(default=datetime.utcnow)
+
+    dataset: Mapped["Dataset"] = relationship(back_populates="catalog_columns")
 
 
 class AuditLog(Base):
