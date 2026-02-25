@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+
+{% block title %}新規提案{% endblock %}
+
+{% block content %}
+<h1>新規提案作成</h1>
+
+{% if error %}
+<div class="alert alert-error">{{ error }}</div>
+{% endif %}
+
+<div class="card">
+    <form method="post" action="/proposer/proposals" enctype="multipart/form-data">
+        <div class="form-group">
+            <label for="dataset_id">対象データセット</label>
+            <select id="dataset_id" name="dataset_id" required>
+                <option value="">選択してください</option>
+                {% for ds in datasets %}
+                <option value="{{ ds.dataset_id }}">{{ ds.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="form-group">
+            <label for="title">タイトル</label>
+            <input type="text" id="title" name="title" required placeholder="提案のタイトル">
+        </div>
+        <div class="form-group">
+            <label for="summary">概要</label>
+            <textarea id="summary" name="summary" required placeholder="提案の概要を入力してください"></textarea>
+        </div>
+        <div class="form-group">
+            <label for="code_file">analysis.py</label>
+            <input type="file" id="code_file" name="code_file" accept=".py" required>
+        </div>
+        <div class="form-group">
+            <label for="report_file">report.md</label>
+            <input type="file" id="report_file" name="report_file" accept=".md" required>
+        </div>
+        <button type="submit" class="btn btn-primary">提出</button>
+    </form>
+</div>
+
+<a href="/proposer/proposals" class="btn btn-primary">提案一覧に戻る</a>
+{% endblock %}

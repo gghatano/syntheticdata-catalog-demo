@@ -23,6 +23,7 @@
                 <th>ファイル種別</th>
                 <th>Seed</th>
                 <th>作成日</th>
+                <th>操作</th>
             </tr>
         </thead>
         <tbody>
@@ -31,6 +32,10 @@
                 <td>{{ a.file_type.value }}</td>
                 <td>{{ a.seed }}</td>
                 <td>{{ a.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                <td>
+                    <a href="/proposer/datasets/{{ dataset.dataset_id }}/synthetic/download"
+                       class="btn btn-sm btn-success">ダウンロード</a>
+                </td>
             </tr>
             {% endfor %}
         </tbody>
@@ -39,6 +44,34 @@
     <p>合成データはまだ公開されていません。</p>
     {% endif %}
 </div>
+
+{% if preview_tables %}
+{% for preview in preview_tables %}
+<div class="card">
+    <h2>データプレビュー: {{ preview.file_type }} (先頭10行)</h2>
+    <div style="overflow-x: auto;">
+        <table>
+            <thead>
+                <tr>
+                    {% for h in preview.headers %}
+                    <th>{{ h }}</th>
+                    {% endfor %}
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in preview.rows %}
+                <tr>
+                    {% for cell in row %}
+                    <td>{{ cell }}</td>
+                    {% endfor %}
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endfor %}
+{% endif %}
 
 {% if quality_report %}
 <div class="card" id="quality-report">
@@ -49,6 +82,6 @@
 
 <div class="action-bar">
     <a href="/proposer/datasets" class="btn btn-primary">一覧に戻る</a>
-    <a href="/proposer/submissions/new" class="btn btn-success">このデータセットに提出</a>
+    <a href="/proposer/proposals/new" class="btn btn-success">このデータセットで提案</a>
 </div>
 {% endblock %}

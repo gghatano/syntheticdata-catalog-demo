@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+
+{% block title %}提案詳細 - {{ proposal.title }}{% endblock %}
+
+{% block content %}
+<h1>{{ proposal.title }}</h1>
+
+<div class="card">
+    <dl class="detail-grid">
+        <dt>提案ID</dt>
+        <dd>{{ proposal.proposal_id }}</dd>
+        <dt>データセット</dt>
+        <dd>{{ proposal.dataset.name }}</dd>
+        <dt>ステータス</dt>
+        <dd>
+            {% if proposal.status.value == "approved" %}
+            <span class="badge badge-success">承認済み</span>
+            {% elif proposal.status.value == "rejected" %}
+            <span class="badge badge-danger">差戻し</span>
+            {% elif proposal.status.value == "submitted" %}
+            <span class="badge badge-info">提出済み</span>
+            {% else %}
+            <span class="badge badge-secondary">{{ proposal.status.value }}</span>
+            {% endif %}
+        </dd>
+        <dt>提出日</dt>
+        <dd>{{ proposal.created_at.strftime('%Y-%m-%d %H:%M') }}</dd>
+    </dl>
+</div>
+
+<div class="card">
+    <h2>概要</h2>
+    <p>{{ proposal.summary }}</p>
+</div>
+
+{% if report_content %}
+<div class="card">
+    <h2>レポート (report.md)</h2>
+    <div id="report-content" class="markdown-body">{{ report_content }}</div>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<script>
+    const el = document.getElementById('report-content');
+    el.innerHTML = marked.parse(el.textContent);
+</script>
+{% endif %}
+
+{% if code_content %}
+<div class="card">
+    <h2>コード (analysis.py)</h2>
+    <pre><code>{{ code_content }}</code></pre>
+</div>
+{% endif %}
+
+{% if comments %}
+<div class="card">
+    <h2>レビューコメント</h2>
+    {% for c in comments %}
+    <div class="card" style="border-left: 3px solid {% if c.action.value == 'approve' %}#27ae60{% elif c.action.value == 'reject' %}#e74c3c{% else %}#3498db{% endif %};">
+        <strong>{{ c.reviewer.display_name }}</strong>
+        <span class="badge {% if c.action.value == 'approve' %}badge-success{% elif c.action.value == 'reject' %}badge-danger{% else %}badge-info{% endif %}">
+            {{ c.action.value }}
+        </span>
+        <small>{{ c.created_at.strftime('%Y-%m-%d %H:%M') }}</small>
+        <p>{{ c.comment }}</p>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+<a href="/proposer/proposals" class="btn btn-primary">提案一覧に戻る</a>
+{% endblock %}

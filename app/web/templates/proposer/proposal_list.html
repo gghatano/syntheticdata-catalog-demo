@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+
+{% block title %}自分の提案一覧{% endblock %}
+
+{% block content %}
+<h1>自分の提案一覧</h1>
+
+<div class="action-bar">
+    <a href="/proposer/proposals/new" class="btn btn-success">新規提案を作成</a>
+</div>
+
+{% if proposals %}
+<table>
+    <thead>
+        <tr>
+            <th>提案ID</th>
+            <th>タイトル</th>
+            <th>データセット</th>
+            <th>ステータス</th>
+            <th>提出日</th>
+            <th>操作</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for p in proposals %}
+        <tr>
+            <td>{{ p.proposal_id }}</td>
+            <td>{{ p.title }}</td>
+            <td>{{ p.dataset.name }}</td>
+            <td>
+                {% if p.status.value == "approved" %}
+                <span class="badge badge-success">承認済み</span>
+                {% elif p.status.value == "rejected" %}
+                <span class="badge badge-danger">差戻し</span>
+                {% elif p.status.value == "submitted" %}
+                <span class="badge badge-info">提出済み</span>
+                {% else %}
+                <span class="badge badge-secondary">{{ p.status.value }}</span>
+                {% endif %}
+            </td>
+            <td>{{ p.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+            <td><a href="/proposer/proposals/{{ p.proposal_id }}" class="btn btn-sm btn-primary">詳細</a></td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% else %}
+<div class="card">
+    <p>まだ提案がありません。</p>
+</div>
+{% endif %}
+{% endblock %}
