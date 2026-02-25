@@ -106,6 +106,45 @@ def list_proposals(
 
 
 @app.command()
+def show(
+    proposal_id: str = typer.Option(..., help="提案ID"),
+    user: str = typer.Option(..., help="閲覧者のuser_id"),
+    output_json: bool = typer.Option(False, "--json", help="JSON形式で出力"),
+):
+    """提案の詳細を表示"""
+    db = _init_db()
+    try:
+        from app.services.proposal_service import ProposalService
+        from app.storage.file_store import FileStore
+
+        file_store = FileStore()
+        svc = ProposalService(db, file_store)
+        proposal = svc.get_proposal(proposal_id, user)
+
+        if output_json:
+            typer.echo(json.dumps({
+                "proposal_id": proposal.proposal_id,
+                "title": proposal.title,
+                "summary": proposal.summary,
+                "status": proposal.status.value,
+                "code_path": proposal.code_path,
+                "report_path": proposal.report_path,
+            }, ensure_ascii=False, indent=2))
+        else:
+            typer.echo(f"提案ID: {proposal.proposal_id}")
+            typer.echo(f"タイトル: {proposal.title}")
+            typer.echo(f"概要: {proposal.summary}")
+            typer.echo(f"ステータス: {proposal.status.value}")
+            typer.echo(f"コード: {proposal.code_path}")
+            typer.echo(f"レポート: {proposal.report_path}")
+    except (ValueError, PermissionError) as e:
+        typer.echo(f"エラー: {e}", err=True)
+        raise typer.Exit(code=1)
+    finally:
+        db.close()
+
+
+@app.command()
 def review(
     proposal_id: str = typer.Option(..., help="提案ID"),
     reviewer: str = typer.Option(..., help="レビュアーのuser_id (hrロール)"),

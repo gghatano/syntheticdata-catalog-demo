@@ -69,6 +69,31 @@ class TestProposalCreateCLI:
             )
 
 
+class TestProposalShowCLI:
+    def test_show_proposal(self, db_session: Session, file_store: FileStore):
+        ds = _setup_published_dataset(db_session, file_store)
+
+        svc = ProposalService(db_session, file_store)
+        proposal = svc.create_proposal("prop_user", ds.dataset_id, "Test", "Summary", SAMPLE_CODE, SAMPLE_REPORT)
+
+        fetched = svc.get_proposal(proposal.proposal_id, "prop_user")
+        assert fetched.proposal_id == proposal.proposal_id
+        assert fetched.title == "Test"
+        assert fetched.summary == "Summary"
+        assert fetched.status.value == "submitted"
+
+    def test_show_proposal_other_proposer_raises(self, db_session: Session, file_store: FileStore):
+        ds = _setup_published_dataset(db_session, file_store)
+        auth = AuthService(db_session)
+        auth.create_user("other_user", "Other", "proposer")
+
+        svc = ProposalService(db_session, file_store)
+        proposal = svc.create_proposal("prop_user", ds.dataset_id, "Test", "Summary", SAMPLE_CODE, SAMPLE_REPORT)
+
+        with pytest.raises(PermissionError):
+            svc.get_proposal(proposal.proposal_id, "other_user")
+
+
 class TestProposalListCLI:
     def test_list_proposals(self, db_session: Session, file_store: FileStore):
         ds = _setup_published_dataset(db_session, file_store)
