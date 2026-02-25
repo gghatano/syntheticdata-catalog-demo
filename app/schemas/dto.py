@@ -52,7 +52,7 @@ class DatasetResponse(BaseModel):
 
     dataset_id: str
     name: str
-    owner_user_id: str
+    owner_user_id: int
     is_published: bool
     created_at: datetime
     files: list[DatasetFileResponse] = []
