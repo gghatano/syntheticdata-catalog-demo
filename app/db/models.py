@@ -52,6 +52,23 @@ class ResultScope(str, enum.Enum):
     public = "public"
 
 
+class ProposalStatus(str, enum.Enum):
+    draft = "draft"
+    submitted = "submitted"
+    under_review = "under_review"
+    approved = "approved"
+    rejected = "rejected"
+    executed_synthetic = "executed_synthetic"
+    executed_real = "executed_real"
+    execution_failed = "execution_failed"
+
+
+class ReviewAction(str, enum.Enum):
+    approve = "approve"
+    reject = "reject"
+    comment = "comment"
+
+
 # ---------- Models ----------
 
 class User(Base):
@@ -65,6 +82,7 @@ class User(Base):
 
     datasets: Mapped[list["Dataset"]] = relationship(back_populates="owner")
     submissions: Mapped[list["Submission"]] = relationship(back_populates="user")
+    proposals: Mapped[list["Proposal"]] = relationship(back_populates="user")
 
 
 class Dataset(Base):
@@ -82,6 +100,7 @@ class Dataset(Base):
     files: Mapped[list["DatasetFile"]] = relationship(back_populates="dataset")
     artifacts: Mapped[list["SyntheticArtifact"]] = relationship(back_populates="dataset")
     submissions: Mapped[list["Submission"]] = relationship(back_populates="dataset")
+    proposals: Mapped[list["Proposal"]] = relationship(back_populates="dataset")
 
 
 class DatasetFile(Base):
@@ -163,6 +182,44 @@ class ExecutionResult(Base):
     published_at: Mapped[datetime | None] = mapped_column(nullable=True)
 
     execution: Mapped["Execution"] = relationship(back_populates="results")
+
+
+class Proposal(Base):
+    __tablename__ = "proposals"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    proposal_id: Mapped[str] = mapped_column(String, unique=True, nullable=False)
+    dataset_id: Mapped[int] = mapped_column(ForeignKey("datasets.id"), nullable=False)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
+    title: Mapped[str] = mapped_column(String, nullable=False)
+    summary: Mapped[str] = mapped_column(Text, nullable=False)
+    code_path: Mapped[str] = mapped_column(String, nullable=False)
+    report_path: Mapped[str] = mapped_column(String, nullable=False)
+    execution_command: Mapped[str | None] = mapped_column(String, nullable=True)
+    expected_outputs: Mapped[str | None] = mapped_column(Text, nullable=True)
+    status: Mapped[ProposalStatus] = mapped_column(
+        Enum(ProposalStatus), default=ProposalStatus.submitted, nullable=False
+    )
+    created_at: Mapped[datetime] = mapped_column(default=datetime.utcnow)
+    updated_at: Mapped[datetime] = mapped_column(default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    dataset: Mapped["Dataset"] = relationship(back_populates="proposals")
+    user: Mapped["User"] = relationship(back_populates="proposals")
+    review_comments: Mapped[list["ReviewComment"]] = relationship(back_populates="proposal")
+
+
+class ReviewComment(Base):
+    __tablename__ = "review_comments"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    proposal_id: Mapped[int] = mapped_column(ForeignKey("proposals.id"), nullable=False)
+    reviewer_user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
+    action: Mapped[ReviewAction] = mapped_column(Enum(ReviewAction), nullable=False)
+    comment: Mapped[str] = mapped_column(Text, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(default=datetime.utcnow)
+
+    proposal: Mapped["Proposal"] = relationship(back_populates="review_comments")
+    reviewer: Mapped["User"] = relationship()
 
 
 class AuditLog(Base):

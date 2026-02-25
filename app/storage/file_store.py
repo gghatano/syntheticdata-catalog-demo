@@ -20,11 +20,13 @@ class FileStore:
         self.synthetic_dir = SYNTHETIC_DATA_DIR
         self.submissions_dir = SUBMISSIONS_DIR
         self.results_dir = RESULTS_DIR
+        self.proposals_dir = REAL_DATA_DIR.parent / "proposals"
         if base_dir is not None:
             self.real_dir = base_dir / "real"
             self.synthetic_dir = base_dir / "synthetic"
             self.submissions_dir = base_dir / "submissions"
             self.results_dir = base_dir / "results"
+            self.proposals_dir = base_dir / "proposals"
 
     # ------------------------------------------------------------------
     # Real data
@@ -153,3 +155,24 @@ class FileStore:
     def get_synthetic_data_path(self, dataset_id: str) -> Path:
         """Return the directory path for a dataset's synthetic data."""
         return self.synthetic_dir / dataset_id
+
+    # ------------------------------------------------------------------
+    # Proposals
+    # ------------------------------------------------------------------
+
+    def save_proposal_file(
+        self,
+        proposal_id: str,
+        filename: str,
+        content: bytes,
+    ) -> Path:
+        """Save a proposal file to data_store/proposals/{proposal_id}/."""
+        dest_dir = self.proposals_dir / proposal_id
+        dest_dir.mkdir(parents=True, exist_ok=True)
+        dest = dest_dir / filename
+        dest.write_bytes(content)
+        return dest
+
+    def get_proposal_file(self, proposal_id: str, filename: str) -> Path:
+        """Return the path of a proposal file."""
+        return self.proposals_dir / proposal_id / filename
