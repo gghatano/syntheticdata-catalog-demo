@@ -1,7 +1,7 @@
 import enum
 from datetime import datetime
 
-from sqlalchemy import Enum, ForeignKey, Integer, String, Text, Boolean
+from sqlalchemy import DateTime, Enum, ForeignKey, Integer, String, Text, Boolean, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
@@ -13,6 +13,7 @@ class UserRole(str, enum.Enum):
     hr = "hr"
     proposer = "proposer"
     admin = "admin"
+    data_owner = "data_owner"
 
 
 class FileType(str, enum.Enum):
@@ -69,6 +70,20 @@ class ReviewAction(str, enum.Enum):
     comment = "comment"
 
 
+class PurposeCategory(str, enum.Enum):
+    improvement = "業務改善"
+    research = "研究"
+    reporting = "レポート"
+    other = "その他"
+
+
+class DataRequestStatus(str, enum.Enum):
+    open = "open"
+    in_progress = "in_progress"
+    completed = "completed"
+    closed = "closed"
+
+
 # ---------- Models ----------
 
 class User(Base):
@@ -78,6 +93,7 @@ class User(Base):
     user_id: Mapped[str] = mapped_column(String, unique=True, nullable=False)
     display_name: Mapped[str] = mapped_column(String, nullable=False)
     role: Mapped[UserRole] = mapped_column(Enum(UserRole), nullable=False)
+    department: Mapped[str | None] = mapped_column(String, nullable=True)
     created_at: Mapped[datetime] = mapped_column(default=datetime.utcnow)
 
     datasets: Mapped[list["Dataset"]] = relationship(back_populates="owner")
@@ -91,8 +107,12 @@ class Dataset(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     dataset_id: Mapped[str] = mapped_column(String, unique=True, nullable=False)
     name: Mapped[str] = mapped_column(String, nullable=False)
+    description: Mapped[str | None] = mapped_column(Text, nullable=True)
     owner_user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
+    department: Mapped[str | None] = mapped_column(String, nullable=True)
     is_published: Mapped[bool] = mapped_column(Boolean, default=False)
+    published_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    expires_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     created_at: Mapped[datetime] = mapped_column(default=datetime.utcnow)
     updated_at: Mapped[datetime] = mapped_column(default=datetime.utcnow, onupdate=datetime.utcnow)
 
@@ -102,6 +122,7 @@ class Dataset(Base):
     submissions: Mapped[list["Submission"]] = relationship(back_populates="dataset")
     catalog_columns: Mapped[list["CatalogColumn"]] = relationship(back_populates="dataset", cascade="all, delete-orphan")
     proposals: Mapped[list["Proposal"]] = relationship(back_populates="dataset")
+    tags: Mapped[list["DatasetTag"]] = relationship(back_populates="dataset", cascade="all, delete-orphan")
 
 
 class DatasetFile(Base):
@@ -214,6 +235,8 @@ class Proposal(Base):
     report_path: Mapped[str] = mapped_column(String, nullable=False)
     execution_command: Mapped[str | None] = mapped_column(String, nullable=True)
     expected_outputs: Mapped[str | None] = mapped_column(Text, nullable=True)
+    purpose: Mapped[str | None] = mapped_column(String, nullable=True)
+    is_showcase: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     status: Mapped[ProposalStatus] = mapped_column(
         Enum(ProposalStatus), default=ProposalStatus.submitted, nullable=False
     )
@@ -237,6 +260,51 @@ class ReviewComment(Base):
 
     proposal: Mapped["Proposal"] = relationship(back_populates="review_comments")
     reviewer: Mapped["User"] = relationship()
+
+
+class DataRequest(Base):
+    __tablename__ = "data_requests"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    request_id: Mapped[str] = mapped_column(String, unique=True, nullable=False)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
+    title: Mapped[str] = mapped_column(String, nullable=False)
+    description: Mapped[str] = mapped_column(Text, nullable=False)
+    desired_columns: Mapped[str | None] = mapped_column(Text, nullable=True)
+    status: Mapped[DataRequestStatus] = mapped_column(
+        Enum(DataRequestStatus), default=DataRequestStatus.open, nullable=False
+    )
+    vote_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    showcase_proposal_id: Mapped[int | None] = mapped_column(ForeignKey("proposals.id"), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(default=datetime.utcnow)
+
+    user: Mapped["User"] = relationship()
+    showcase_proposal: Mapped["Proposal | None"] = relationship()
+    votes: Mapped[list["DataRequestVote"]] = relationship(back_populates="data_request", cascade="all, delete-orphan")
+
+
+class DataRequestVote(Base):
+    __tablename__ = "data_request_votes"
+    __table_args__ = (UniqueConstraint("request_id", "user_id", name="uq_vote_request_user"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    request_id: Mapped[int] = mapped_column(ForeignKey("data_requests.id"), nullable=False)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(default=datetime.utcnow)
+
+    data_request: Mapped["DataRequest"] = relationship(back_populates="votes")
+    user: Mapped["User"] = relationship()
+
+
+class DatasetTag(Base):
+    __tablename__ = "dataset_tags"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    dataset_id: Mapped[int] = mapped_column(ForeignKey("datasets.id"), nullable=False)
+    tag_name: Mapped[str] = mapped_column(String, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(default=datetime.utcnow)
+
+    dataset: Mapped["Dataset"] = relationship(back_populates="tags")
 
 
 class AuditLog(Base):

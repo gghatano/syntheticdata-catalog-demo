@@ -2,7 +2,7 @@ import csv
 from pathlib import Path
 
 from fastapi import APIRouter, Depends, Request
-from fastapi.responses import FileResponse, RedirectResponse
+from fastapi.responses import FileResponse, JSONResponse, RedirectResponse, Response
 from fastapi.templating import Jinja2Templates
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -10,10 +10,13 @@ from sqlalchemy.orm import Session
 from app.db.models import Proposal
 from app.db.session import get_db
 from app.dependencies import get_current_user, get_file_store
+from app.services.data_request_service import DataRequestService
 from app.services.dataset_service import DatasetService
 from app.services.proposal_service import ProposalService
 from app.services.submission_service import SubmissionService
+from app.services.profiling_service import ProfilingService
 from app.services.synthetic_service import SyntheticService
+from app.services.template_service import TemplateService
 from app.storage.file_store import FileStore
 
 router = APIRouter()
@@ -23,22 +26,36 @@ templates = Jinja2Templates(directory="app/web/templates")
 @router.get("/datasets")
 def dataset_list(
     request: Request,
+    q: str | None = None,
+    tag: str | None = None,
+    sort: str = "created_at",
     user=Depends(get_current_user),
     db: Session = Depends(get_db),
     file_store: FileStore = Depends(get_file_store),
 ):
     svc = DatasetService(db, file_store)
-    datasets = svc.list_published_datasets()
+    tags_filter = [tag] if tag else None
+    datasets = svc.search_datasets(query=q, tags=tags_filter, sort_by=sort)
+
+    # Collect all unique tags for filter chips
+    all_tags: set[str] = set()
+    for ds in datasets:
+        for t in ds.tags:
+            all_tags.add(t.tag_name)
+
+    ctx = {
+        "request": request,
+        "datasets": datasets,
+        "user": user,
+        "q": q or "",
+        "current_tag": tag or "",
+        "sort": sort,
+        "all_tags": sorted(all_tags),
+    }
 
     if request.headers.get("HX-Request"):
-        return templates.TemplateResponse(
-            "fragments/dataset_list.html",
-            {"request": request, "datasets": datasets, "user": user},
-        )
-    return templates.TemplateResponse(
-        "proposer/datasets.html",
-        {"request": request, "datasets": datasets, "user": user},
-    )
+        return templates.TemplateResponse("fragments/dataset_list.html", ctx)
+    return templates.TemplateResponse("proposer/datasets.html", ctx)
 
 
 @router.get("/datasets/{dataset_id}")
@@ -53,9 +70,14 @@ def dataset_detail(
     dataset = svc.get_dataset(dataset_id, user.user_id)
 
     quality_report = None
+    quality_summary = None
     try:
         syn_svc = SyntheticService(db, file_store)
         quality_report = syn_svc.get_quality_report(dataset_id, user.user_id)
+        if quality_report:
+            from app.synthetic.quality_report import QualityReporter
+            reporter = QualityReporter()
+            quality_summary = reporter.generate_plain_summary(quality_report)
     except (ValueError, PermissionError):
         pass
 
@@ -89,6 +111,7 @@ def dataset_detail(
             "dataset": dataset,
             "user": user,
             "quality_report": quality_report,
+            "quality_summary": quality_summary,
             "preview_tables": preview_tables,
         },
     )
@@ -123,6 +146,35 @@ def download_synthetic(
         media_type="text/csv",
     )
 
+
+
+
+@router.get("/datasets/{dataset_id}/template/download")
+def download_template(
+    dataset_id: str,
+    user=Depends(get_current_user),
+    db: Session = Depends(get_db),
+    file_store: FileStore = Depends(get_file_store),
+):
+    svc = TemplateService(db, file_store)
+    zip_bytes = svc.generate_template_zip(dataset_id, user.user_id)
+    return Response(
+        content=zip_bytes,
+        media_type="application/zip",
+        headers={"Content-Disposition": f"attachment; filename=template-{dataset_id}.zip"},
+    )
+
+
+@router.get("/datasets/{dataset_id}/profile")
+def dataset_profile(
+    dataset_id: str,
+    user=Depends(get_current_user),
+    db: Session = Depends(get_db),
+    file_store: FileStore = Depends(get_file_store),
+):
+    svc = ProfilingService(db, file_store)
+    profiles = svc.get_profile_data(dataset_id, user.user_id)
+    return JSONResponse(content=profiles)
 
 @router.get("/submissions/new")
 def submission_form(
@@ -255,6 +307,7 @@ async def proposal_create(
     dataset_id = form.get("dataset_id", "").strip()
     title = form.get("title", "").strip()
     summary = form.get("summary", "").strip()
+    purpose = form.get("purpose", "").strip() or None
     code_file = form.get("code_file")
     report_file = form.get("report_file")
 
@@ -303,6 +356,7 @@ async def proposal_create(
             summary=summary,
             code_content=code_content,
             report_content=report_content,
+            purpose=purpose,
         )
     except (ValueError, PermissionError) as e:
         return templates.TemplateResponse(
@@ -357,3 +411,63 @@ def proposal_detail(
             "report_content": report_content,
         },
     )
+
+
+# ---------- Data Requests ----------
+
+
+@router.get("/data-requests")
+def data_request_list(
+    request: Request,
+    user=Depends(get_current_user),
+    db: Session = Depends(get_db),
+    file_store: FileStore = Depends(get_file_store),
+):
+    svc = DataRequestService(db)
+    status_filter = request.query_params.get("status")
+    requests_list = svc.list_requests(status_filter=status_filter)
+
+    showcase_proposals = ProposalService(db, file_store).list_showcase_proposals()
+
+    return templates.TemplateResponse(
+        "data_requests.html",
+        {
+            "request": request,
+            "user": user,
+            "data_requests": requests_list,
+            "showcase_proposals": showcase_proposals,
+        },
+    )
+
+
+@router.post("/data-requests")
+async def data_request_create(
+    request: Request,
+    user=Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    form = await request.form()
+    title = form.get("title", "").strip()
+    description = form.get("description", "").strip()
+    desired_columns = form.get("desired_columns", "").strip() or None
+    showcase_proposal_id_str = form.get("showcase_proposal_id", "").strip()
+    showcase_proposal_id = int(showcase_proposal_id_str) if showcase_proposal_id_str else None
+
+    if not title or not description:
+        return RedirectResponse(url="/proposer/data-requests", status_code=303)
+
+    svc = DataRequestService(db)
+    svc.create_request(user.user_id, title, description, desired_columns, showcase_proposal_id)
+    return RedirectResponse(url="/proposer/data-requests", status_code=303)
+
+
+@router.post("/data-requests/{request_id}/vote")
+def data_request_vote(
+    request_id: str,
+    request: Request,
+    user=Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    svc = DataRequestService(db)
+    svc.vote(request_id, user.user_id)
+    return RedirectResponse(url="/proposer/data-requests", status_code=303)

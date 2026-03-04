@@ -9,9 +9,20 @@
     <dl class="detail-grid">
         <dt>データセットID</dt>
         <dd>{{ dataset.dataset_id }}</dd>
+        {% if dataset.description %}
+        <dt>説明</dt>
+        <dd>{{ dataset.description }}</dd>
+        {% endif %}
         <dt>作成日</dt>
         <dd>{{ dataset.created_at.strftime('%Y-%m-%d %H:%M') }}</dd>
     </dl>
+    {% if dataset.tags %}
+    <div style="margin-top: 0.5rem;">
+        {% for t in dataset.tags %}
+        <span class="badge badge-secondary">{{ t.tag_name }}</span>
+        {% endfor %}
+    </div>
+    {% endif %}
 </div>
 
 <div class="card">
@@ -73,6 +84,107 @@
 {% endfor %}
 {% endif %}
 
+<div class="card" id="data-profile">
+    <h2>データプロファイル</h2>
+    <div id="profile-table"></div>
+    <div id="profile-detail" style="margin-top: 1rem;"></div>
+</div>
+
+<script>
+(function() {
+    let profileData = [];
+
+    fetch('/proposer/datasets/{{ dataset.dataset_id }}/profile')
+        .then(r => r.json())
+        .then(profiles => {
+            profileData = profiles;
+            const container = document.getElementById('profile-table');
+            if (!profiles.length) {
+                container.innerHTML = '<p>プロファイルデータがありません。</p>';
+                return;
+            }
+
+            // Catalog-style summary table
+            let html = '<div style="overflow-x:auto;"><table>';
+            html += '<thead><tr><th>列名</th><th>型</th><th>件数</th><th>NULL数</th><th>ユニーク数</th><th>要約</th></tr></thead>';
+            html += '<tbody>';
+            profiles.forEach((p, i) => {
+                let summary = '';
+                const s = p.chart_data && p.chart_data.stats ? p.chart_data.stats : {};
+                if (p.chart_type === 'histogram') {
+                    if (s.min !== undefined) summary = 'min=' + s.min + ', max=' + s.max + ', mean=' + s.mean;
+                } else {
+                    const labels = p.chart_data && p.chart_data.labels ? p.chart_data.labels : [];
+                    if (labels.length) summary = labels.slice(0, 3).join(', ') + (labels.length > 3 ? '...' : '');
+                }
+                html += '<tr style="cursor:pointer;" onclick="showProfileDetail(' + i + ')">';
+                html += '<td><strong>' + p.column_name + '</strong>' + (p.is_pii ? ' <span class="badge badge-warning">PII</span>' : '') + '</td>';
+                html += '<td>' + p.inferred_type + '</td>';
+                html += '<td>' + (p.total_count || '-') + '</td>';
+                html += '<td>' + (p.null_count || 0) + ' (' + ((p.null_rate || 0) * 100).toFixed(1) + '%)</td>';
+                html += '<td>' + (p.unique_count || '-') + '</td>';
+                html += '<td><small>' + summary + '</small></td>';
+                html += '</tr>';
+            });
+            html += '</tbody></table></div>';
+            container.innerHTML = html;
+        })
+        .catch(() => {
+            document.getElementById('profile-table').innerHTML = '<p>プロファイルの読み込みに失敗しました。</p>';
+        });
+
+    window.showProfileDetail = function(idx) {
+        const p = profileData[idx];
+        if (!p) return;
+        const detail = document.getElementById('profile-detail');
+        let html = '<div class="card"><h3>' + p.column_name + ' (' + p.inferred_type + ')</h3>';
+
+        // Stats table
+        const s = p.chart_data && p.chart_data.stats ? p.chart_data.stats : {};
+        if (Object.keys(s).length) {
+            html += '<dl class="detail-grid">';
+            for (const [k, v] of Object.entries(s)) {
+                html += '<dt>' + k + '</dt><dd>' + v + '</dd>';
+            }
+            html += '</dl>';
+        }
+
+        // Chart
+        if (p.chart_data && p.chart_data.labels && p.chart_data.labels.length) {
+            html += '<canvas id="detail-chart" style="max-height:300px;"></canvas>';
+        }
+        html += '</div>';
+        detail.innerHTML = html;
+
+        if (p.chart_data && p.chart_data.labels && p.chart_data.labels.length) {
+            const canvas = document.getElementById('detail-chart');
+            new Chart(canvas, {
+                type: 'bar',
+                data: {
+                    labels: p.chart_data.labels,
+                    datasets: [{
+                        label: p.column_name,
+                        data: p.chart_data.values,
+                        backgroundColor: p.chart_type === 'histogram'
+                            ? 'rgba(54, 162, 235, 0.5)'
+                            : 'rgba(75, 192, 192, 0.5)',
+                        borderColor: p.chart_type === 'histogram'
+                            ? 'rgba(54, 162, 235, 1)'
+                            : 'rgba(75, 192, 192, 1)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: { legend: { display: false } },
+                    scales: { y: { beginAtZero: true } }
+                }
+            });
+        }
+    };
+})();
+</script>
+
 {% if quality_report %}
 <div class="card" id="quality-report">
     <h2>品質レポート</h2>
@@ -82,6 +194,8 @@
 
 <div class="action-bar">
     <a href="/proposer/datasets" class="btn btn-primary">一覧に戻る</a>
+    <a href="/proposer/datasets/{{ dataset.dataset_id }}/template/download"
+       class="btn btn-primary">テンプレートをダウンロード</a>
     <a href="/proposer/proposals/new" class="btn btn-success">このデータセットで提案</a>
 </div>
 {% endblock %}

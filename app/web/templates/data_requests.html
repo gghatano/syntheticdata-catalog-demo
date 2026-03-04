@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+
+{% block title %}データリクエスト{% endblock %}
+
+{% block content %}
+<h1>データリクエスト</h1>
+
+<div class="card">
+    <h2>新規リクエスト</h2>
+    <form method="post" action="/proposer/data-requests">
+        <div class="form-group">
+            <label for="title">タイトル</label>
+            <input type="text" id="title" name="title" required>
+        </div>
+        <div class="form-group">
+            <label for="description">説明</label>
+            <textarea id="description" name="description" rows="3" required></textarea>
+        </div>
+        <div class="form-group">
+            <label for="desired_columns">希望カラム（任意）</label>
+            <textarea id="desired_columns" name="desired_columns" rows="2" placeholder="例: 年齢, 部署, 勤続年数"></textarea>
+        </div>
+        <div class="form-group">
+            <label for="showcase_proposal_id">参考ショーケース事例（任意）</label>
+            <select id="showcase_proposal_id" name="showcase_proposal_id">
+                <option value="">-- 選択しない --</option>
+                {% for sp in showcase_proposals %}
+                <option value="{{ sp.id }}">{{ sp.title }} ({{ sp.proposal_id }})</option>
+                {% endfor %}
+            </select>
+        </div>
+        <button type="submit" class="btn btn-primary">リクエスト投稿</button>
+    </form>
+</div>
+
+<div class="card">
+    <h2>リクエスト一覧</h2>
+    {% if data_requests %}
+    <table>
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>タイトル</th>
+                <th>投稿者</th>
+                <th>参考事例</th>
+                <th>ステータス</th>
+                <th>投票数</th>
+                <th>操作</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for dr in data_requests %}
+            <tr>
+                <td>{{ dr.request_id }}</td>
+                <td>
+                    <strong>{{ dr.title }}</strong>
+                    <br><small>{{ dr.description[:100] }}{% if dr.description|length > 100 %}...{% endif %}</small>
+                    {% if dr.desired_columns %}
+                    <br><small>希望カラム: {{ dr.desired_columns }}</small>
+                    {% endif %}
+                </td>
+                <td>{{ dr.user.display_name }}</td>
+                <td>
+                    {% if dr.showcase_proposal %}
+                    <a href="/proposer/proposals/{{ dr.showcase_proposal.proposal_id }}">{{ dr.showcase_proposal.title }}</a>
+                    {% else %}
+                    -
+                    {% endif %}
+                </td>
+                <td>
+                    {% if dr.status.value == "open" %}
+                    <span class="badge badge-info">オープン</span>
+                    {% elif dr.status.value == "in_progress" %}
+                    <span class="badge badge-warning">対応中</span>
+                    {% elif dr.status.value == "completed" %}
+                    <span class="badge badge-success">完了</span>
+                    {% else %}
+                    <span class="badge badge-secondary">クローズ</span>
+                    {% endif %}
+                </td>
+                <td>{{ dr.vote_count }}</td>
+                <td>
+                    <form method="post" action="/proposer/data-requests/{{ dr.request_id }}/vote" style="display:inline">
+                        <button type="submit" class="btn btn-sm btn-secondary">投票</button>
+                    </form>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p>リクエストはまだありません。</p>
+    {% endif %}
+</div>
+{% endblock %}
