@@ -41,24 +41,26 @@ class ProfilingService:
             stats = json.loads(col.stats_json) if col.stats_json else {}
             series = df[col.column_name] if df is not None and col.column_name in df.columns else None
 
+            total_count = int(series.shape[0]) if series is not None else stats.get("total_count", 0)
+            null_count = int(series.isna().sum()) if series is not None else stats.get("missing_count", 0)
+            unique_count = int(series.nunique()) if series is not None else stats.get("unique_count", 0)
+
             profile: dict = {
                 "column_name": col.column_name,
                 "inferred_type": col.inferred_type,
                 "is_pii": col.is_pii,
-                "total_count": int(series.shape[0]) if series is not None else stats.get("total_count", 0),
-                "null_count": int(series.isna().sum()) if series is not None else stats.get("missing_count", 0),
-                "unique_count": int(series.nunique()) if series is not None else stats.get("unique_count", 0),
+                "total_count": total_count,
+                "null_count": null_count,
+                "unique_count": unique_count,
+                "null_rate": round(null_count / total_count, 4) if total_count > 0 else 0.0,
             }
-
-            total = profile["total_count"]
-            profile["null_rate"] = round(profile["null_count"] / total, 4) if total > 0 else 0.0
 
             if col.inferred_type in ("int64", "float64", "numeric", "integer", "float"):
                 profile["chart_type"] = "histogram"
                 profile["chart_data"] = self._build_numeric_profile(series, stats)
             else:
                 profile["chart_type"] = "bar"
-                profile["chart_data"] = self._build_categorical_profile(series, stats)
+                profile["chart_data"] = self._build_categorical_profile(series, stats, unique_count)
 
             profiles.append(profile)
 
@@ -66,19 +68,20 @@ class ProfilingService:
 
     def _read_synthetic_csv(self, dataset: Dataset) -> pd.DataFrame | None:
         """Read the first synthetic CSV artifact for profiling."""
-        artifacts = list(
-            self.db.execute(
-                select(SyntheticArtifact).where(SyntheticArtifact.dataset_id == dataset.id)
-            ).scalars().all()
-        )
-        for artifact in artifacts:
-            path = Path(artifact.file_path)
-            if path.exists() and path.suffix == ".csv":
-                try:
-                    return pd.read_csv(path)
-                except Exception:
-                    continue
-        return None
+        artifact = self.db.execute(
+            select(SyntheticArtifact)
+            .where(
+                SyntheticArtifact.dataset_id == dataset.id,
+                SyntheticArtifact.file_path.like("%.csv"),
+            )
+            .limit(1)
+        ).scalar_one_or_none()
+        if artifact is None:
+            return None
+        try:
+            return pd.read_csv(Path(artifact.file_path))
+        except Exception:
+            return None
 
     def _build_numeric_profile(self, series: pd.Series | None, stats: dict) -> dict:
         """Build histogram + stats from CSV series, falling back to stats_json."""
@@ -112,7 +115,7 @@ class ProfilingService:
             "stats": {k: stats[k] for k in ("min", "max", "mean", "std") if k in stats},
         }
 
-    def _build_categorical_profile(self, series: pd.Series | None, stats: dict) -> dict:
+    def _build_categorical_profile(self, series: pd.Series | None, stats: dict, unique_count: int = 0) -> dict:
         """Build value_counts bar chart from CSV series, falling back to stats_json."""
         if series is not None:
             vc = self._compute_value_counts(series)
@@ -120,7 +123,7 @@ class ProfilingService:
                 "labels": vc["labels"],
                 "values": vc["values"],
                 "stats": {
-                    "cardinality": int(series.nunique()),
+                    "cardinality": unique_count,
                 },
             }
 

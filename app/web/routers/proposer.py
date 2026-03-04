@@ -421,17 +421,13 @@ def data_request_list(
     request: Request,
     user=Depends(get_current_user),
     db: Session = Depends(get_db),
+    file_store: FileStore = Depends(get_file_store),
 ):
     svc = DataRequestService(db)
     status_filter = request.query_params.get("status")
     requests_list = svc.list_requests(status_filter=status_filter)
 
-    # Fetch showcase proposals for the form select
-    showcase_proposals = list(
-        db.execute(
-            select(Proposal).where(Proposal.is_showcase.is_(True)).order_by(Proposal.created_at.desc())
-        ).scalars().all()
-    )
+    showcase_proposals = ProposalService(db, file_store).list_showcase_proposals()
 
     return templates.TemplateResponse(
         "data_requests.html",
